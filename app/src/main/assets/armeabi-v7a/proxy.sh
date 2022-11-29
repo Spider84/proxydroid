@@ -13,7 +13,6 @@ PATH=$DIR:$PATH
 
 case $action in
  start)
-
 echo "
 base {
  log_debug = off;
