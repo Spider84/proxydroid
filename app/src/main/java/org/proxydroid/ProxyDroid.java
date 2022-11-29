@@ -83,6 +83,7 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.ksmaze.android.preference.ListPreferenceMultiSelect;
 
 import org.proxydroid.utils.Constraints;
@@ -92,6 +93,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -331,10 +333,18 @@ public class ProxyDroid extends PreferenceActivity
         if (layout != null) {
             // Add the adView to it
             layout.addView(adView, 0);
-            adView.loadAd(new AdRequest.Builder()
-                    .addTestDevice("F58907F28184A828DD0DB6F8E38189C6")
-                    .addTestDevice("236666026C17FEFB1B547C4A3B2322CD")
-                    .build());
+
+            final List<String> testDevices = new ArrayList<>();
+            testDevices.add("F58907F28184A828DD0DB6F8E38189C6");
+            testDevices.add("236666026C17FEFB1B547C4A3B2322CD");
+
+            final RequestConfiguration requestConfiguration
+                    = new RequestConfiguration.Builder()
+                    .setTestDeviceIds(testDevices)
+                    .build();
+            MobileAds.setRequestConfiguration(requestConfiguration);
+
+            adView.loadAd(new AdRequest.Builder().build());
         }
 
         hostText = (EditTextPreference) findPreference("host");
