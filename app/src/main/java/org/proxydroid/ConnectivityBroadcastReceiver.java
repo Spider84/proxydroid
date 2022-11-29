@@ -55,6 +55,8 @@ import com.ksmaze.android.preference.ListPreferenceMultiSelect;
 import org.proxydroid.utils.Constraints;
 import org.proxydroid.utils.Utils;
 
+import java.util.Set;
+
 public class ConnectivityBroadcastReceiver extends BroadcastReceiver {
 
   private Handler mHandler = new Handler();
@@ -182,12 +184,10 @@ public class ConnectivityBroadcastReceiver extends BroadcastReceiver {
     });
   }
 
-  public String onlineSSID(Context context, String ssid, String excludedSsid) {
-    String ssids[] = ListPreferenceMultiSelect.parseStoredValue(ssid);
-    String excludedSsids[] = ListPreferenceMultiSelect.parseStoredValue(excludedSsid);
-    if (ssids == null)
+  public String onlineSSID(Context context, Set<String> ssid, Set<String> excludedSsid) {
+    if (ssid == null)
       return null;
-    if (ssids.length < 1)
+    if (ssid.isEmpty())
       return null;
     ConnectivityManager manager = (ConnectivityManager) context
         .getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -195,7 +195,7 @@ public class ConnectivityBroadcastReceiver extends BroadcastReceiver {
     if (networkInfo == null)
       return null;
     if (networkInfo.getType() != ConnectivityManager.TYPE_WIFI) {
-      for (String item : ssids) {
+      for (String item : ssid) {
         if (Constraints.WIFI_AND_3G.equals(item))
           return item;
         if (Constraints.ONLY_3G.equals(item))
@@ -213,15 +213,15 @@ public class ConnectivityBroadcastReceiver extends BroadcastReceiver {
       return null;
     current = current.replace("\"", "");
 
-    if (excludedSsids != null) {
-        for (String item : excludedSsids) {
+    if (excludedSsid != null) {
+        for (String item : excludedSsid) {
             if (current.equals(item)) {
                 return null; // Never connect proxy on excluded ssid
             }
         }
     }
 
-    for (String item : ssids) {
+    for (String item : ssid) {
       if (Constraints.WIFI_AND_3G.equals(item))
         return item;
       if (Constraints.ONLY_WIFI.equals(item))

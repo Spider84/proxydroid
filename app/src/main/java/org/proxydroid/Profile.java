@@ -20,12 +20,15 @@ package org.proxydroid;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Vector;
 import java.util.regex.Pattern;
 
@@ -53,8 +56,8 @@ public class Profile implements Serializable {
 	private boolean isPAC = false;
 
 	private String domain;
-	private String ssid;
-	private String excludedSsid;
+	private Set<String> ssid;
+	private Set<String> excludedSsid;
 
 	public Profile() {
 		init();
@@ -67,8 +70,8 @@ public class Profile implements Serializable {
 		proxyType = settings.getString("proxyType", "http");
 		user = settings.getString("user", "");
 		password = settings.getString("password", "");
-		ssid = settings.getString("ssid", "");
-		excludedSsid = settings.getString("excludedSsid", "");
+		ssid = settings.getStringSet("ssid", null);
+		excludedSsid = settings.getStringSet("excludedSsid", null);
 		bypassAddrs = settings.getString("bypassAddrs", "");
 		proxyedApps = settings.getString("Proxyed", "");
 		domain = settings.getString("domain", "");
@@ -114,15 +117,14 @@ public class Profile implements Serializable {
 		ed.putBoolean("isBypassApps", isBypassApps);
 		ed.putBoolean("isPAC", isPAC);
 		ed.putBoolean("isDNSProxy", isDNSProxy);
-		ed.putString("ssid", ssid);
-		ed.putString("excludedSsid", excludedSsid);
+		ed.putStringSet("ssid", ssid);
+		ed.putStringSet("excludedSsid", excludedSsid);
 		ed.commit();
 	}
 
 	public void init() {
 		host = "";
 		port = 3128;
-		ssid = "";
 		user = "";
 		domain = "";
 		password = "";
@@ -130,8 +132,8 @@ public class Profile implements Serializable {
 		isAuth = false;
 		proxyType = "http";
 		isAutoConnect = false;
-		ssid = "";
-		excludedSsid = "";
+		ssid = null;
+		excludedSsid = null;
 		isNTLM = false;
 		bypassAddrs = "";
 		proxyedApps = "";
@@ -148,8 +150,20 @@ public class Profile implements Serializable {
 	public JSONObject encodeJson() {
 		JSONObject obj = new JSONObject();
 		obj.put("name", name);
-		obj.put("ssid", ssid);
-		obj.put("excludedSsid", excludedSsid);
+		if (ssid !=null && !ssid.isEmpty()) {
+			JSONArray a = new JSONArray();
+			for (String s: ssid) {
+				a.add(s);
+			}
+			obj.put("ssid", a);
+		}
+		if (excludedSsid !=null && !excludedSsid.isEmpty()) {
+			JSONArray a = new JSONArray();
+			for (String s: excludedSsid) {
+				a.add(s);
+			}
+			obj.put("excludedSsid", a);
+		}
 		obj.put("host", host);
 		obj.put("proxyType", proxyType);
 		obj.put("user", user);
@@ -207,6 +221,21 @@ public class Profile implements Serializable {
 			else
 				return def;
 		}
+
+		public Set<String> getStringSet(String key) {
+			Object tmp = obj.get(key);
+			if (tmp != null && tmp instanceof JSONArray) {
+				JSONArray js = (JSONArray)tmp;
+				Set<String> ret = new HashSet<String>();
+				for (Object o : js)
+				{
+					ret.add((String) o);
+				}
+				if (!ret.isEmpty())
+					return ret;
+			}
+			return null;
+		}
 	}
 
 	public void decodeJson(String values) {
@@ -219,8 +248,8 @@ public class Profile implements Serializable {
 		}
 
 		name = jd.getString("name", "");
-		ssid = jd.getString("ssid", "");
-		excludedSsid = jd.getString("excludedSsid", "");
+		ssid = jd.getStringSet("ssid");
+		excludedSsid = jd.getStringSet("excludedSsid");
 		host = jd.getString("host", "");
 		proxyType = jd.getString("proxyType", "http");
 		user = jd.getString("user", "");
@@ -321,14 +350,17 @@ public class Profile implements Serializable {
 	/**
 	 * @return the ssid
 	 */
-	public String getSsid() {
+	public Set<String> getSsid() {
+
 		return ssid;
+
 	}
 
 	/**
 	 * @return the excluded ssid
 	 */
-	public String getExcludedSsid() {
+	public Set<String> getExcludedSsid() {
+
 		return excludedSsid;
 	}
 
@@ -336,17 +368,13 @@ public class Profile implements Serializable {
 	 * @param ssid
 	 *            the ssid to set
 	 */
-	public void setSsid(String ssid) {
-		this.ssid = ssid;
-	}
+	public void setSsid(Set<String> ssid) { this.ssid = ssid; }
 
 	/**
 	 * @param ssid
 	 *            the excluded ssid to set
 	 */
-	public void setExcludedSsid(String ssid) {
-		this.excludedSsid = ssid;
-	}
+	public void setExcludedSsid(Set<String> ssid) { this.excludedSsid = ssid; }
 
 	/**
 	 * @return the host
@@ -566,7 +594,7 @@ public class Profile implements Serializable {
 	}
 
 	/**
-	 * @param isDNSProxy
+	 * @param isPAC
 	 *            the isDNSProxy to set
 	 */
 	public void setPAC(boolean isPAC) {

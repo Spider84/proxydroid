@@ -47,8 +47,8 @@
         android:title="@string/auto_connect">
     </CheckBoxPreference>
 
-    <com.ksmaze.android.preference.ListPreferenceMultiSelect
-        android:defaultValue=""
+    <MultiSelectListPreference
+        android:defaultValue="@array/empty_array"
         android:dialogTitle="@string/ssid"
         android:entries="@array/ssid_default_entries"
         android:entryValues="@array/ssid_default_values"
@@ -56,8 +56,8 @@
         android:summary="@string/ssid_summary"
         android:title="@string/ssid"/>
 
-    <com.ksmaze.android.preference.ListPreferenceMultiSelect
-        android:defaultValue=""
+    <MultiSelectListPreference
+        android:defaultValue="@array/empty_array"
         android:dialogTitle="@string/excluded_ssid"
         android:entries="@array/excluded_ssid_default_entries"
         android:entryValues="@array/excluded_ssid_default_values"
@@ -131,7 +131,7 @@
 
   </PreferenceCategory>
   <PreferenceCategory android:title="@string/notif_cat">
-    <RingtonePreference
+    <Preference
         android:key="settings_key_notif_ringtone"
         android:ringtoneType="notification"
         android:showDefault="true"
