@@ -38,6 +38,8 @@
 
 package org.proxydroid;
 
+import static androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -63,6 +65,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.preference.CheckBoxPreference;
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
@@ -84,11 +88,6 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.RequestConfiguration;
 import androidx.preference.MultiSelectListPreference;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
@@ -187,6 +186,7 @@ public class ProxyDroid extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_FOLLOW_SYSTEM);
         setContentView(R.layout.settings_activity);
         if (savedInstanceState == null) {
             getSupportFragmentManager()
@@ -222,7 +222,6 @@ public class ProxyDroid extends AppCompatActivity {
         private Preference proxyedApps;
         private Preference bypassAddrs;
         private Preference ringtonePref;
-        private AdView adView;
         private ActivityResultLauncher<Intent> mStartForResult;
         private ActivityResultLauncher<String[]> requestPermissionLauncher;
 
@@ -314,33 +313,6 @@ public class ProxyDroid extends AppCompatActivity {
                 editor.remove("excludedSsid");
                 editor.apply();
             }
-
-            // Create the adView
-//            adView = new AdView(getActivity());
-//            adView.setAdUnitId("ca-app-pub-9097031975646651/4806879927");
-//            adView.setAdSize(AdSize.SMART_BANNER);
-//            // Lookup your LinearLayout assuming it’s been given
-//            // the attribute android:id="@+id/mainLayout"
-//            ViewParent parent = getListView().getParent();
-//            LinearLayout layout = getLayout(parent);
-//
-//            // disable adds
-//            if (layout != null) {
-//                // Add the adView to it
-//                layout.addView(adView, 0);
-//
-//                final List<String> testDevices = new ArrayList<>();
-//                testDevices.add("F58907F28184A828DD0DB6F8E38189C6");
-//                testDevices.add("236666026C17FEFB1B547C4A3B2322CD");
-//
-//                final RequestConfiguration requestConfiguration
-//                        = new RequestConfiguration.Builder()
-//                        .setTestDeviceIds(testDevices)
-//                        .build();
-//                MobileAds.setRequestConfiguration(requestConfiguration);
-//
-//                adView.loadAd(new AdRequest.Builder().build());
-//            }
 
             hostText = (EditTextPreference) findPreference("host");
             portText = (EditTextPreference) findPreference("port");
@@ -514,9 +486,6 @@ public class ProxyDroid extends AppCompatActivity {
 
         @Override
         public void onDestroy() {
-
-            if (adView != null) adView.destroy();
-
             if (ssidReceiver != null) getActivity().unregisterReceiver(ssidReceiver);
 
             super.onDestroy();
@@ -1248,16 +1217,16 @@ public class ProxyDroid extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
 
         menu.add(Menu.NONE, Menu.FIRST + 1, 4, getString(R.string.recovery))
-                .setIcon(android.R.drawable.ic_menu_close_clear_cancel)
+                .setIcon(R.drawable.ic_baseline_restart_alt_24)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         menu.add(Menu.NONE, Menu.FIRST + 2, 2, getString(R.string.profile_del))
-                .setIcon(android.R.drawable.ic_menu_delete)
+                .setIcon(R.drawable.ic_baseline_delete_outline_24)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
         menu.add(Menu.NONE, Menu.FIRST + 3, 5, getString(R.string.about))
-                .setIcon(android.R.drawable.ic_menu_info_details)
+                .setIcon(R.drawable.ic_baseline_info_24)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
         menu.add(Menu.NONE, Menu.FIRST + 4, 1, getString(R.string.change_name))
-                .setIcon(android.R.drawable.ic_menu_edit)
+                .setIcon(R.drawable.ic_baseline_drive_file_rename_outline_24)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
 
         return super.onCreateOptionsMenu(menu);

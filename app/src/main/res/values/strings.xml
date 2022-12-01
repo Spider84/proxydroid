@@ -31,8 +31,8 @@
     <string name="service_failed">Please check your network and login information</string>
     <string name="reconnect_fail">Cannot reconnect, service stopped</string>
     <string name="connecting">Connecting</string>
-    <string name="auto_connecting">Connecting...</string>
-    <string name="loading">Loading app list...</string>
+    <string name="auto_connecting">Connecting…</string>
+    <string name="loading">Loading app list…</string>
 
     <!-- settings function category -->
     <string name="function_cat">Service Controller</string>
@@ -79,11 +79,6 @@
 		specified SSID</string>
     <string name="excluded_ssid">Never Bound these WiFi SSID</string>
     <string name="excluded_ssid_summary">Never bind the proxy setting to specified SSID</string>
-
-    <string-array name="ssid_default_values"></string-array>
-    <string-array name="ssid_default_entries"></string-array>
-    <string-array name="excluded_ssid_default_values"></string-array>
-    <string-array name="excluded_ssid_default_entries"></string-array>
 
     <string name="auto_set_proxy">Global Proxy</string>
     <string name="auto_set_proxy_summary">Enable the global proxy (needs ROOT permission
@@ -167,13 +162,6 @@
     <string name="reseting">Reseting…</string>
     <string name="importing">Importing…</string>
     <string name="exporting">Exported to:</string>
-
-    <string-array name="presets_list">
-        <item>Blank</item>
-        <item>Localhost</item>
-        <item>Intranet</item>
-        <item>CHN Route</item>
-    </string-array>
 
     <!-- file chooser -->
     <string name="file_chooser">Choose your key file</string>

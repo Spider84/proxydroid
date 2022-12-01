@@ -80,11 +80,6 @@
     <string name="excluded_ssid">Ne jamais relier ces SSID WiFi</string>
     <string name="excluded_ssid_summary">Ne jamais relier le réglage proxy au SSID défini</string>
 
-    <string-array name="ssid_default_values"></string-array>
-    <string-array name="ssid_default_entries"></string-array>
-    <string-array name="excluded_ssid_default_values"></string-array>
-    <string-array name="excluded_ssid_default_entries"></string-array>
-
     <string name="auto_set_proxy">Proxy Global</string>
     <string name="auto_set_proxy_summary">Activer le proxy global (nécessite les droits ROOT
 		et le support IPTABLES)</string>

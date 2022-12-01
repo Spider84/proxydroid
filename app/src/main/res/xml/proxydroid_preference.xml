@@ -2,11 +2,11 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
   <PreferenceCategory android:title="@string/function_cat">
-    <CheckBoxPreference
+    <SwitchPreference
         android:key="isRunning"
         android:summary="@string/service_summary"
         android:title="@string/service_controller">
-    </CheckBoxPreference>
+    </SwitchPreference>
 
     <ListPreference
         android:key="profile"
@@ -85,7 +85,7 @@
     </EditTextPreference>
     <EditTextPreference
         android:key="password"
-        android:password="true"
+        android:inputType="textPassword"
         android:summary="@string/password_summary"
         android:title="@string/password">
     </EditTextPreference>

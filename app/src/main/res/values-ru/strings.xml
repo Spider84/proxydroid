@@ -133,13 +133,6 @@
     <string name="importing">Импорт…</string>
     <string name="exporting">Экспортировано в:</string>
 
-    <string-array name="presets_list">
-        <item>Пусто</item>
-        <item>Localhost</item>
-        <item>Intranet</item>
-        <item>Маршрут CHN</item>
-    </string-array>
-
     <!-- file chooser -->
     <string name="file_chooser">Выберите файл с вашим ключом</string>
     <string name="key_manager">Диспетчер файлов ключей</string>
@@ -153,6 +146,14 @@
     <!-- Connection errors -->
     <string name="msg_pac_error">Неверный или не поддерживаемый PAC-файл</string>
     <string name="msg_resolve_error">Неверное имя прокси сервера</string>
+    <string name="host_pac">PAC</string>
+    <string name="certificate">Сертификат</string>
+    <string name="certificate_summary">Клиентский Сертификат для HTTP авторизации</string>
+    <string name="excluded_ssid">Не реагировать на эти WiFI сети</string>
+    <string name="excluded_ssid_summary">Не применять proxy для следующих WIfI сетей</string>
+    <string name="dns_proxy">Прокси DNS</string>
+    <string name="about_title">ProxyDroid %s</string>
+    <string name="profile_del_confirm">Удалить данный профиль</string>
 
 
 </resources>

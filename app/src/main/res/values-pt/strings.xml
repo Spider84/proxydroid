@@ -76,9 +76,6 @@
     <string name="ssid">Rede associada</string>
     <string name="ssid_summary">Associar a configuração do proxy à rede 2G/3G ou ao SSID especificado</string>
 
-    <string-array name="ssid_default_values"></string-array>
-    <string-array name="ssid_default_entries"></string-array>
-
     <string name="auto_set_proxy">Proxy Global</string>
     <string name="auto_set_proxy_summary">Ativar o proxy global (necessita de acesso ROOT e suporte ao IPTABLES)</string>
     <string name="dns_proxy">Proxy DNS</string>
