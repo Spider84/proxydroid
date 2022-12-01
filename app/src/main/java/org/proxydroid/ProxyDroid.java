@@ -46,7 +46,6 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -81,22 +80,20 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewParent;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.preference.MultiSelectListPreference;
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult;
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.proxydroid.utils.Constraints;
 import org.proxydroid.utils.Utils;
@@ -134,32 +131,17 @@ public class ProxyDroid extends AppCompatActivity {
         String versionName = "";
         try {
             versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-        } catch (NameNotFoundException ex) {
-            versionName = "";
+        } catch (NameNotFoundException ignored) {
         }
 
         new AlertDialog.Builder(this).setTitle(
                 String.format(getString(R.string.about_title), versionName))
                 .setCancelable(false)
-                .setNegativeButton(getString(R.string.ok_iknow), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
-                    }
-                })
+                .setNegativeButton(getString(R.string.ok_iknow), (dialog, id) -> dialog.cancel())
                 .setView(web)
                 .create()
                 .show();
     }
-
-//
-//    private boolean isTextEmpty(String s, String msg) {
-//        if (s == null || s.length() <= 0) {
-//            showAToast(msg);
-//            return true;
-//        }
-//        return false;
-//    }
 
     @Override
     public void onStart() {
@@ -169,15 +151,6 @@ public class ProxyDroid extends AppCompatActivity {
     @Override
     public void onStop() {
         super.onStop();
-    }
-
-    private LinearLayout getLayout(ViewParent parent) {
-        if (parent instanceof LinearLayout) return (LinearLayout) parent;
-        if (parent != null) {
-            return getLayout(parent.getParent());
-        } else {
-            return null;
-        }
     }
 
     /**
@@ -195,13 +168,15 @@ public class ProxyDroid extends AppCompatActivity {
                     .commit();
         }
 
+        final Bundle bundle = new Bundle();
+        bundle.putString(FirebaseAnalytics.Param.SCREEN_NAME, "home_screen");
         ((ProxyDroidApplication)getApplication())
-                .firebaseAnalytics.setCurrentScreen(this, "home_screen", null);
+                .firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle);
     }
 
     public static class SettingsFragment extends PreferenceFragmentCompat implements OnSharedPreferenceChangeListener {
         private ProgressDialog pd = null;
-        private Profile mProfile = new Profile();
+        private final Profile mProfile = new Profile();
         private CheckBoxPreference isAutoConnectCheck;
         private CheckBoxPreference isAutoSetProxyCheck;
         private CheckBoxPreference isAuthCheck;
@@ -223,9 +198,8 @@ public class ProxyDroid extends AppCompatActivity {
         private Preference bypassAddrs;
         private Preference ringtonePref;
         private ActivityResultLauncher<Intent> mStartForResult;
-        private ActivityResultLauncher<String[]> requestPermissionLauncher;
 
-        private BroadcastReceiver ssidReceiver = new BroadcastReceiver() {
+        private final BroadcastReceiver ssidReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String action = intent.getAction();
@@ -264,20 +238,21 @@ public class ProxyDroid extends AppCompatActivity {
         public void onCreate(@Nullable Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
 
+            if (!isAdded()) return;
+
             mStartForResult = registerForActivityResult(new StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
+                    result -> {
                         if (result.getResultCode() == Activity.RESULT_OK) {
                             Intent data = result.getData();
+                            final Context context = getActivity();
                             // Handle the Intent
-                            if (data != null) {
-                                final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                            if (data != null && context != null) {
+                                final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
                                 final Editor edit = settings.edit();
                                 final Uri ringtone = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
                                 if (ringtone != null) {
                                     final Ringtone rt = RingtoneManager.getRingtone(getActivity(), ringtone);
-                                    final String title = rt.getTitle(getActivity());
+                                    final String title = rt.getTitle(context);
                                     edit.putString("settings_key_notif_ringtone", ringtone.toString());
                                     ringtonePref.setSummary(title);
                                 } else {
@@ -285,16 +260,13 @@ public class ProxyDroid extends AppCompatActivity {
                                     edit.remove("settings_key_notif_ringtone");
                                     ringtonePref.setSummary(R.string.notif_ringtone_summary);
                                 }
-                                edit.commit();
+                                edit.apply();
                             }
                         }
-                    }
-                });
+                    });
 
-            requestPermissionLauncher = registerForActivityResult(new RequestMultiplePermissions(),
-                    isGranted -> {
-                        continueLoad();
-                    }
+            ActivityResultLauncher<String[]> requestPermissionLauncher = registerForActivityResult(new RequestMultiplePermissions(),
+                    isGranted -> continueLoad()
             );
 
             final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
@@ -355,7 +327,7 @@ public class ProxyDroid extends AppCompatActivity {
                 ed.putString("profileEntries",
                         getString(R.string.profile_default) + "|" + getString(R.string.profile_new));
                 ed.putString("profile", "1");
-                ed.commit();
+                ed.apply();
 
                 profileList.setDefaultValue("1");
             }
@@ -380,8 +352,10 @@ public class ProxyDroid extends AppCompatActivity {
 
         private void continueLoad()
         {
-            getActivity().registerReceiver(ssidReceiver,
-                    new IntentFilter(android.net.ConnectivityManager.CONNECTIVITY_ACTION));
+            final Context context = getActivity();
+            if (context != null)
+                context.registerReceiver(ssidReceiver,
+                        new IntentFilter(android.net.ConnectivityManager.CONNECTIVITY_ACTION));
 
             loadProfileList();
 
@@ -424,7 +398,7 @@ public class ProxyDroid extends AppCompatActivity {
 
                         SharedPreferences.Editor edit = settings.edit();
                         edit.putBoolean(version, true);
-                        edit.commit();
+                        edit.apply();
 
                         handler.sendEmptyMessage(MSG_UPDATE_FINISHED);
                     }
@@ -433,19 +407,23 @@ public class ProxyDroid extends AppCompatActivity {
         }
 
         private void loadProfileList() {
-            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
-            String[] profileEntries = settings.getString("profileEntries", "").split("\\|");
-            String[] profileValues = settings.getString("profileValues", "").split("\\|");
+            try {
+                final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                String[] profileEntries = settings.getString("profileEntries", "").split("\\|");
+                String[] profileValues = settings.getString("profileValues", "").split("\\|");
 
-            profileList.setEntries(profileEntries);
-            profileList.setEntryValues(profileValues);
+                profileList.setEntries(profileEntries);
+                profileList.setEntryValues(profileValues);
+            } catch (Exception ignored) {
+
+            }
         }
 
         private void loadNetworkList() {
             WifiManager wm = (WifiManager) getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             List<WifiConfiguration> wcs;
-            String[] ssidEntries = null;
-            String[] pureSsid = null;
+            String[] ssidEntries;
+            String[] pureSsid;
             int n = 3;
             int wifiIndex = n;
 
@@ -486,7 +464,7 @@ public class ProxyDroid extends AppCompatActivity {
 
         @Override
         public void onDestroy() {
-            if (ssidReceiver != null) getActivity().unregisterReceiver(ssidReceiver);
+            getActivity().unregisterReceiver(ssidReceiver);
 
             super.onDestroy();
         }
@@ -550,21 +528,13 @@ public class ProxyDroid extends AppCompatActivity {
                 edit.putBoolean("isRunning", false);
             }
 
-            edit.commit();
+            edit.apply();
 
             if (settings.getBoolean("isRunning", false)) {
-                if (Build.VERSION.SDK_INT >= 14) {
-                    ((SwitchPreference) isRunningCheck).setChecked(true);
-                } else {
-                    ((CheckBoxPreference) isRunningCheck).setChecked(true);
-                }
+                ((SwitchPreference) isRunningCheck).setChecked(true);
                 disableAll();
             } else {
-                if (Build.VERSION.SDK_INT >= 14) {
-                    ((SwitchPreference) isRunningCheck).setChecked(false);
-                } else {
-                    ((CheckBoxPreference) isRunningCheck).setChecked(false);
-                }
+                ((SwitchPreference) isRunningCheck).setChecked(false);
                 enableAll();
             }
 
@@ -651,7 +621,7 @@ public class ProxyDroid extends AppCompatActivity {
                     ed.putString("profileEntries", profileEntriesBuffer.toString());
                     ed.putString("profileValues", profileValuesBuffer.toString());
                     ed.putString("profile", Integer.toString(newProfileValue));
-                    ed.commit();
+                    ed.apply();
 
                     loadProfileList();
                 } else {
@@ -706,28 +676,16 @@ public class ProxyDroid extends AppCompatActivity {
                     userText.setEnabled(true);
                     passwordText.setEnabled(true);
                     isNTLMCheck.setEnabled(true);
-                    if (isNTLMCheck.isChecked()) {
-                        domainText.setEnabled(true);
-                    } else {
-                        domainText.setEnabled(false);
-                    }
+                    domainText.setEnabled(isNTLMCheck.isChecked());
                 }
             }
 
             if (key.equals("isNTLM")) {
-                if (!settings.getBoolean("isAuth", false) || !settings.getBoolean("isNTLM", false)) {
-                    domainText.setEnabled(false);
-                } else {
-                    domainText.setEnabled(true);
-                }
+                domainText.setEnabled(settings.getBoolean("isAuth", false) && settings.getBoolean("isNTLM", false));
             }
 
             if (key.equals("proxyType")) {
-                if (!"https".equals(settings.getString("proxyType", ""))) {
-                    certificateText.setEnabled(false);
-                } else {
-                    certificateText.setEnabled(true);
-                }
+                certificateText.setEnabled("https".equals(settings.getString("proxyType", "")));
             }
 
             if (key.equals("isAutoConnect")) {
@@ -754,83 +712,87 @@ public class ProxyDroid extends AppCompatActivity {
             if (key.equals("isRunning")) {
                 if (settings.getBoolean("isRunning", false)) {
                     disableAll();
-                    if (Build.VERSION.SDK_INT >= 14) {
-                        ((SwitchPreference) isRunningCheck).setChecked(true);
-                    } else {
-                        ((CheckBoxPreference) isRunningCheck).setChecked(true);
-                    }
+                    ((SwitchPreference) isRunningCheck).setChecked(true);
                     if (!Utils.isConnecting()) serviceStart();
                 } else {
                     enableAll();
-                    if (Build.VERSION.SDK_INT >= 14) {
-                        ((SwitchPreference) isRunningCheck).setChecked(false);
-                    } else {
-                        ((CheckBoxPreference) isRunningCheck).setChecked(false);
-                    }
+                    ((SwitchPreference) isRunningCheck).setChecked(false);
                     if (!Utils.isConnecting()) serviceStop();
                 }
             }
 
-            if (key.equals("ssid")) {
-                final Set<String> sSet = settings.getStringSet("ssid", null);
-                if (sSet == null || sSet.isEmpty()) {
-                    ssidList.setSummary(getString(R.string.ssid_summary));
-                } else {
-                    ssidList.setSummary(String.join(",", sSet));
+            switch (key) {
+                case "ssid": {
+                    final Set<String> sSet = settings.getStringSet("ssid", null);
+                    if (sSet == null || sSet.isEmpty()) {
+                        ssidList.setSummary(getString(R.string.ssid_summary));
+                    } else {
+                        ssidList.setSummary(String.join(",", sSet));
+                    }
+                    break;
                 }
-            } else if (key.equals("excludedSsid")) {
-                final Set<String> sSet = settings.getStringSet("excludedSsid", null);
-                if (sSet == null || sSet.isEmpty()) {
-                    excludedSsidList.setSummary(getString(R.string.excluded_ssid_summary));
-                } else {
-                    excludedSsidList.setSummary(String.join(",", sSet));
+                case "excludedSsid": {
+                    final Set<String> sSet = settings.getStringSet("excludedSsid", null);
+                    if (sSet == null || sSet.isEmpty()) {
+                        excludedSsidList.setSummary(getString(R.string.excluded_ssid_summary));
+                    } else {
+                        excludedSsidList.setSummary(String.join(",", sSet));
+                    }
+                    break;
                 }
-            } else if (key.equals("user")) {
-                if (settings.getString("user", "").equals("")) {
-                    userText.setSummary(getString(R.string.user_summary));
-                } else {
-                    userText.setSummary(settings.getString("user", ""));
-                }
-            } else if (key.equals("domain")) {
-                if (settings.getString("domain", "").equals("")) {
-                    domainText.setSummary(getString(R.string.domain_summary));
-                } else {
-                    domainText.setSummary(settings.getString("domain", ""));
-                }
-            } else if (key.equals("proxyType")) {
-                if (settings.getString("proxyType", "").equals("")) {
-                    proxyTypeList.setSummary(getString(R.string.proxy_type_summary));
-                    certificateText.setSummary(getString(R.string.certificate_summary));
-                } else {
-                    proxyTypeList.setSummary(settings.getString("proxyType", "").toUpperCase());
-                    certificateText.setSummary(settings.getString("certificate", ""));
-                }
-            } else if (key.equals("bypassAddrs")) {
-                if (settings.getString("bypassAddrs", "").equals("")) {
-                    bypassAddrs.setSummary(getString(R.string.set_bypass_summary));
-                } else {
-                    bypassAddrs.setSummary(settings.getString("bypassAddrs", "").replace("|", ", "));
-                }
-            } else if (key.equals("port")) {
-                if (settings.getString("port", "-1").equals("-1") || settings.getString("port", "-1")
-                        .equals("")) {
-                    portText.setSummary(getString(R.string.port_summary));
-                } else {
-                    portText.setSummary(settings.getString("port", ""));
-                }
-            } else if (key.equals("host")) {
-                if (settings.getString("host", "").equals("")) {
-                    hostText.setSummary(settings.getBoolean("isPAC", false) ? R.string.host_pac_summary
-                            : R.string.host_summary);
-                } else {
-                    hostText.setSummary(settings.getString("host", ""));
-                }
-            } else if (key.equals("password")) {
-                if (!settings.getString("password", "").equals("")) {
-                    passwordText.setSummary("*********");
-                } else {
-                    passwordText.setSummary(getString(R.string.password_summary));
-                }
+                case "user":
+                    if (settings.getString("user", "").equals("")) {
+                        userText.setSummary(getString(R.string.user_summary));
+                    } else {
+                        userText.setSummary(settings.getString("user", ""));
+                    }
+                    break;
+                case "domain":
+                    if (settings.getString("domain", "").equals("")) {
+                        domainText.setSummary(getString(R.string.domain_summary));
+                    } else {
+                        domainText.setSummary(settings.getString("domain", ""));
+                    }
+                    break;
+                case "proxyType":
+                    if (settings.getString("proxyType", "").equals("")) {
+                        proxyTypeList.setSummary(getString(R.string.proxy_type_summary));
+                        certificateText.setSummary(getString(R.string.certificate_summary));
+                    } else {
+                        proxyTypeList.setSummary(settings.getString("proxyType", "").toUpperCase());
+                        certificateText.setSummary(settings.getString("certificate", ""));
+                    }
+                    break;
+                case "bypassAddrs":
+                    if (settings.getString("bypassAddrs", "").equals("")) {
+                        bypassAddrs.setSummary(getString(R.string.set_bypass_summary));
+                    } else {
+                        bypassAddrs.setSummary(settings.getString("bypassAddrs", "").replace("|", ", "));
+                    }
+                    break;
+                case "port":
+                    if (settings.getString("port", "-1").equals("-1") || settings.getString("port", "-1")
+                            .equals("")) {
+                        portText.setSummary(getString(R.string.port_summary));
+                    } else {
+                        portText.setSummary(settings.getString("port", ""));
+                    }
+                    break;
+                case "host":
+                    if (settings.getString("host", "").equals("")) {
+                        hostText.setSummary(settings.getBoolean("isPAC", false) ? R.string.host_pac_summary
+                                : R.string.host_summary);
+                    } else {
+                        hostText.setSummary(settings.getString("host", ""));
+                    }
+                    break;
+                case "password":
+                    if (!settings.getString("password", "").equals("")) {
+                        passwordText.setSummary("*********");
+                    } else {
+                        passwordText.setSummary(getString(R.string.password_summary));
+                    }
+                    break;
             }
         }
 
@@ -895,7 +857,7 @@ public class ProxyDroid extends AppCompatActivity {
             mProfile.getProfile(settings);
             SharedPreferences.Editor ed = settings.edit();
             ed.putString(oldProfileName, mProfile.toString());
-            ed.commit();
+            ed.apply();
 
             String profileString = settings.getString(((ProxyDroid)getActivity()).profile, "");
 
@@ -938,12 +900,7 @@ public class ProxyDroid extends AppCompatActivity {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
                 builder.setMessage(msg)
                         .setCancelable(false)
-                        .setNegativeButton(getString(R.string.ok_iknow), new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int id) {
-                                dialog.cancel();
-                            }
-                        });
+                        .setNegativeButton(getString(R.string.ok_iknow), (dialog, id) -> dialog.cancel());
                 AlertDialog alert = builder.create();
                 alert.show();
             }
@@ -1054,54 +1011,47 @@ public class ProxyDroid extends AppCompatActivity {
 
             AlertDialog ad = new AlertDialog.Builder(getActivity()).setTitle(R.string.change_name)
                     .setView(textEntryView)
-                    .setPositiveButton(R.string.alert_dialog_ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int whichButton) {
-                            EditText profileName = (EditText) textEntryView.findViewById(R.id.text_edit);
-                            SharedPreferences settings =
-                                    PreferenceManager.getDefaultSharedPreferences(getActivity());
-                            String name = profileName.getText().toString();
-                            if (name == null) return;
-                            name = name.replace("|", "");
-                            if (name.length() <= 0) return;
-                            Editor ed = settings.edit();
-                            ed.putString("profile" + ((ProxyDroid)getActivity()).profile, name);
-                            ed.commit();
+                    .setPositiveButton(R.string.alert_dialog_ok, (dialog, whichButton) -> {
+                        EditText profileName1 = (EditText) textEntryView.findViewById(R.id.text_edit);
+                        SharedPreferences settings =
+                                PreferenceManager.getDefaultSharedPreferences(getActivity());
+                        String name = profileName1.getText().toString();
+                        name = name.replace("|", "");
+                        if (name.length() <= 0) return;
+                        Editor ed = settings.edit();
+                        ed.putString("profile" + ((ProxyDroid)getActivity()).profile, name);
+                        ed.apply();
 
-                            profileList.setSummary(getProfileName(((ProxyDroid)getActivity()).profile));
+                        profileList.setSummary(getProfileName(((ProxyDroid)getActivity()).profile));
 
-                            String[] profileEntries = settings.getString("profileEntries", "").split("\\|");
-                            String[] profileValues = settings.getString("profileValues", "").split("\\|");
+                        String[] profileEntries = settings.getString("profileEntries", "").split("\\|");
+                        String[] profileValues = settings.getString("profileValues", "").split("\\|");
 
-                            StringBuilder profileEntriesBuffer = new StringBuilder();
-                            StringBuilder profileValuesBuffer = new StringBuilder();
+                        StringBuilder profileEntriesBuffer = new StringBuilder();
+                        StringBuilder profileValuesBuffer = new StringBuilder();
 
-                            for (int i = 0; i < profileValues.length - 1; i++) {
-                                if (profileValues[i].equals(((ProxyDroid)getActivity()).profile)) {
-                                    profileEntriesBuffer.append(getProfileName(((ProxyDroid)getActivity()).profile)).append("|");
-                                } else {
-                                    profileEntriesBuffer.append(profileEntries[i]).append("|");
-                                }
-                                profileValuesBuffer.append(profileValues[i]).append("|");
+                        for (int i = 0; i < profileValues.length - 1; i++) {
+                            if (profileValues[i].equals(((ProxyDroid)getActivity()).profile)) {
+                                profileEntriesBuffer.append(getProfileName(((ProxyDroid)getActivity()).profile)).append("|");
+                            } else {
+                                profileEntriesBuffer.append(profileEntries[i]).append("|");
                             }
-
-                            profileEntriesBuffer.append(getString(R.string.profile_new));
-                            profileValuesBuffer.append("0");
-
-                            ed = settings.edit();
-                            ed.putString("profileEntries", profileEntriesBuffer.toString());
-                            ed.putString("profileValues", profileValuesBuffer.toString());
-
-                            ed.commit();
-
-                            loadProfileList();
+                            profileValuesBuffer.append(profileValues[i]).append("|");
                         }
+
+                        profileEntriesBuffer.append(getString(R.string.profile_new));
+                        profileValuesBuffer.append("0");
+
+                        ed = settings.edit();
+                        ed.putString("profileEntries", profileEntriesBuffer.toString());
+                        ed.putString("profileValues", profileValuesBuffer.toString());
+
+                        ed.apply();
+
+                        loadProfileList();
                     })
-                    .setNegativeButton(R.string.alert_dialog_cancel, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int whichButton) {
-                            /* User clicked cancel so do some stuff */
-                        }
+                    .setNegativeButton(R.string.alert_dialog_cancel, (dialog, whichButton) -> {
+                        /* User clicked cancel so do some stuff */
                     })
                     .create();
             ad.show();
@@ -1133,7 +1083,7 @@ public class ProxyDroid extends AppCompatActivity {
                 ed.putString("profileEntries", profileEntriesBuffer.toString());
                 ed.putString("profileValues", profileValuesBuffer.toString());
                 ed.putString("profile", newProfileValue);
-                ed.commit();
+                ed.apply();
 
                 loadProfileList();
             }
@@ -1150,7 +1100,7 @@ public class ProxyDroid extends AppCompatActivity {
         private void CopyAssets() {
             AssetManager assetManager = getActivity().getAssets();
             String[] files = null;
-            String abi = null;
+            String abi;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                 abi = Build.SUPPORTED_ABIS[0];
             } else {
@@ -1166,8 +1116,8 @@ public class ProxyDroid extends AppCompatActivity {
             }
             if (files != null) {
                 for (String file : files) {
-                    InputStream in = null;
-                    OutputStream out = null;
+                    InputStream in;
+                    OutputStream out;
                     try {
                         if (abi.matches("armeabi-v7a|arm64-v8a"))
                             in = assetManager.open("armeabi-v7a/" + file);
@@ -1176,10 +1126,8 @@ public class ProxyDroid extends AppCompatActivity {
                         out = new FileOutputStream(getActivity().getFilesDir().getAbsolutePath() + "/" + file);
                         copyFile(in, out);
                         in.close();
-                        in = null;
                         out.flush();
                         out.close();
-                        out = null;
                     } catch (Exception e) {
                         Log.e(TAG, e.getMessage());
                     }
@@ -1190,8 +1138,7 @@ public class ProxyDroid extends AppCompatActivity {
         public void reset() {
             try {
                 getActivity().stopService(new Intent(getActivity(), ProxyDroidService.class));
-            } catch (Exception e) {
-                // Nothing
+            } catch (Exception ignored) {
             }
 
             CopyAssets();
@@ -1246,19 +1193,13 @@ public class ProxyDroid extends AppCompatActivity {
             case Menu.FIRST + 2:
                 AlertDialog ad = new AlertDialog.Builder(this).setTitle(R.string.profile_del)
                         .setMessage(R.string.profile_del_confirm)
-                        .setPositiveButton(R.string.alert_dialog_ok, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int whichButton) {
-                                /* User clicked OK so do some stuff */
-                                ((SettingsFragment)(getSupportFragmentManager().getFragments().get(0))).delProfile(profile);
-                            }
+                        .setPositiveButton(R.string.alert_dialog_ok, (dialog, whichButton) -> {
+                            /* User clicked OK so do some stuff */
+                            ((SettingsFragment)(getSupportFragmentManager().getFragments().get(0))).delProfile(profile);
                         })
-                        .setNegativeButton(R.string.alert_dialog_cancel, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int whichButton) {
-                                /* User clicked Cancel so do some stuff */
-                                dialog.dismiss();
-                            }
+                        .setNegativeButton(R.string.alert_dialog_cancel, (dialog, whichButton) -> {
+                            /* User clicked Cancel so do some stuff */
+                            dialog.dismiss();
                         })
                         .create();
 
